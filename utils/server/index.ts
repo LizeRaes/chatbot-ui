@@ -1,7 +1,7 @@
 import { Message } from '@/types/chat';
 import { OpenAIModel } from '@/types/openai';
 
-import { AZURE_DEPLOYMENT_ID, OPENAI_API_HOST, OPENAI_API_TYPE, OPENAI_API_VERSION, OPENAI_ORGANIZATION } from '../app/const';
+import { AZURE_DEPLOYMENT_ID, OPENAI_API_HOST, OPENAI_API_PROXY_HOST, OPENAI_API_TYPE, OPENAI_API_VERSION, OPENAI_ORGANIZATION } from '../app/const';
 
 import {
   ParsedEvent,
@@ -30,22 +30,23 @@ export const OpenAIStream = async (
   key: string,
   messages: Message[],
 ) => {
-  let url = `${OPENAI_API_HOST}/v1/chat/completions`;
+  let url = `${OPENAI_API_PROXY_HOST}/v1/chat/completions`;
+  //let url = `${OPENAI_API_HOST}/v1/chat/completions`;
   if (OPENAI_API_TYPE === 'azure') {
     url = `${OPENAI_API_HOST}/openai/deployments/${AZURE_DEPLOYMENT_ID}/chat/completions?api-version=${OPENAI_API_VERSION}`;
   }
   const res = await fetch(url, {
     headers: {
       'Content-Type': 'application/json',
-      ...(OPENAI_API_TYPE === 'openai' && {
-        Authorization: `Bearer ${key ? key : process.env.OPENAI_API_KEY}`
-      }),
-      ...(OPENAI_API_TYPE === 'azure' && {
-        'api-key': `${key ? key : process.env.OPENAI_API_KEY}`
-      }),
-      ...((OPENAI_API_TYPE === 'openai' && OPENAI_ORGANIZATION) && {
-        'OpenAI-Organization': OPENAI_ORGANIZATION,
-      }),
+     // ...(OPENAI_API_TYPE === 'openai' && {
+     //   Authorization: `Bearer ${key ? key : process.env.OPENAI_API_KEY}`
+     // }),
+     // ...(OPENAI_API_TYPE === 'azure' && {
+     //   'api-key': `${key ? key : process.env.OPENAI_API_KEY}`
+    //  }),
+    //  ...((OPENAI_API_TYPE === 'openai' && OPENAI_ORGANIZATION) && {
+    //    'OpenAI-Organization': OPENAI_ORGANIZATION,
+    //  }),
     },
     method: 'POST',
     body: JSON.stringify({
@@ -108,6 +109,7 @@ export const OpenAIStream = async (
       const parser = createParser(onParse);
 
       for await (const chunk of res.body as any) {
+        console.log(decoder.decode(chunk));
         parser.feed(decoder.decode(chunk));
       }
     },
