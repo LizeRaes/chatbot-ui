@@ -100,10 +100,14 @@ export const Chat = memo(({ stopConversationRef }: Props) => {
           prompt: updatedConversation.prompt,
           temperature: updatedConversation.temperature,
         };
+        console.log('plugin: '+plugin);
         const endpoint = getEndpoint(plugin);
+        console.log('endpoint:');
+        console.log(endpoint);
         let body;
         if (!plugin) {
           body = JSON.stringify(chatBody);
+          console.log('not plugin, chatbody: '+body);
         } else {
           body = JSON.stringify({
             ...chatBody,
@@ -115,6 +119,7 @@ export const Chat = memo(({ stopConversationRef }: Props) => {
               ?.requiredKeys.find((key) => key.key === 'GOOGLE_CSE_ID')?.value,
           });
         }
+        console.log('chatbody for POST: '+body);
         const controller = new AbortController();
         const response = await fetch(endpoint, {
           method: 'POST',
@@ -124,6 +129,9 @@ export const Chat = memo(({ stopConversationRef }: Props) => {
           signal: controller.signal,
           body,
         });
+        console.log('got response:');
+        console.log(response);
+        console.log(JSON.stringify(response));
         if (!response.ok) {
           homeDispatch({ field: 'loading', value: false });
           homeDispatch({ field: 'messageIsStreaming', value: false });

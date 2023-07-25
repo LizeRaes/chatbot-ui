@@ -37,7 +37,9 @@ const useApiService = () => {
     },
     [fetchService],
   );
-
+  console.log('getModels:');
+  console.log(getModels);
+  console.log(JSON.stringify(getModels));
   return {
     getModels,
   };

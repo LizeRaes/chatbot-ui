@@ -14,9 +14,11 @@ export const config = {
 };
 
 const handler = async (req: Request): Promise<Response> => {
+  console.log('local 3000 version of api/chat was called');
   try {
     const { model, messages, key, prompt, temperature } = (await req.json()) as ChatBody;
 
+    console.log('api/chat 1');
     await init((imports) => WebAssembly.instantiate(wasm, imports));
     const encoding = new Tiktoken(
       tiktokenModel.bpe_ranks,
@@ -24,6 +26,7 @@ const handler = async (req: Request): Promise<Response> => {
       tiktokenModel.pat_str,
     );
 
+    console.log('api/chat 2');
     let promptToSend = prompt;
     if (!promptToSend) {
       promptToSend = DEFAULT_SYSTEM_PROMPT;
@@ -35,6 +38,8 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const prompt_tokens = encoding.encode(promptToSend);
+
+    console.log('api/chat 3');
 
     let tokenCount = prompt_tokens.length;
     let messagesToSend: Message[] = [];
@@ -52,7 +57,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     encoding.free();
 
+    console.log('about to call openAI in chat.ts with params model, promptToSend, temperatureToUse, key, messagesToSend: '
+      +JSON.stringify(model)+promptToSend+temperatureToUse+key+JSON.stringify(messagesToSend));
     const stream = await OpenAIStream(model, promptToSend, temperatureToUse, key, messagesToSend);
+
+    console.log('api/chat AWAITING STREAM OBJECT');
+    
 
     return new Response(stream);
   } catch (error) {
@@ -60,7 +70,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (error instanceof OpenAIError) {
       return new Response('Error', { status: 500, statusText: error.message });
     } else {
-      return new Response('Error', { status: 500 });
+      return new Response('Error', { status: 500, statusText: 'error unrelated to openAI'});
     }
   }
 };

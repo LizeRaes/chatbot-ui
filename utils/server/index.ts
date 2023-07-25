@@ -1,7 +1,7 @@
 import { Message } from '@/types/chat';
 import { OpenAIModel } from '@/types/openai';
 
-import { AZURE_DEPLOYMENT_ID, OPENAI_API_HOST, OPENAI_API_TYPE, OPENAI_API_VERSION, OPENAI_ORGANIZATION } from '../app/const';
+import { AZURE_DEPLOYMENT_ID, OPENAI_API_HOST, OPENAI_API_GD_PROXY_HOST, DUMMY_KEY, OPENAI_API_TYPE, OPENAI_API_VERSION, OPENAI_ORGANIZATION } from '../app/const';
 
 import {
   ParsedEvent,
@@ -30,15 +30,36 @@ export const OpenAIStream = async (
   key: string,
   messages: Message[],
 ) => {
-  let url = `${OPENAI_API_HOST}/v1/chat/completions`;
-  if (OPENAI_API_TYPE === 'azure') {
-    url = `${OPENAI_API_HOST}/openai/deployments/${AZURE_DEPLOYMENT_ID}/chat/completions?api-version=${OPENAI_API_VERSION}`;
-  }
+// let url = `${OPENAI_API_HOST}/v1/chat/completions`;
+  let url = `${OPENAI_API_GD_PROXY_HOST}/v1/chat/completions`;
+  console.log('Arrived in OpenAIStream: url = '+url);
+  console.log('Posted Body = only print if needed');
+  // if (OPENAI_API_TYPE === 'azure') {
+  //  url = `${OPENAI_API_HOST}/openai/deployments/${AZURE_DEPLOYMENT_ID}/chat/completions?api-version=${OPENAI_API_VERSION}`;
+  //}
+  //added console logging of exact body - lize
+  const jsonData = {
+    ...(OPENAI_API_TYPE === 'openai' && { model: model.id }),
+    messages: [
+      {
+        role: 'system',
+        content: systemPrompt,
+      },
+      ...messages,
+    ],
+    max_tokens: 1000,
+    temperature: temperature,
+    stream: true,
+  };
+
+  console.log('JSON DATA POSTED TO BACKEND:', JSON.stringify(jsonData, null, 2));
+
   const res = await fetch(url, {
     headers: {
       'Content-Type': 'application/json',
       ...(OPENAI_API_TYPE === 'openai' && {
-        Authorization: `Bearer ${key ? key : process.env.OPENAI_API_KEY}`
+    //    Authorization: `Bearer ${key ? key : process.env.OPENAI_API_KEY}`
+        Authorization: `Bearer ${key ? key : DUMMY_KEY}`
       }),
       ...(OPENAI_API_TYPE === 'azure' && {
         'api-key': `${key ? key : process.env.OPENAI_API_KEY}`
@@ -63,19 +84,26 @@ export const OpenAIStream = async (
     }),
   });
 
+  console.log('JSON DATA WAS POSTED');
+
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
 
   if (res.status !== 200) {
     const result = await res.json();
     if (result.error) {
+    console.log('Error in server/index.ts - result is not 200. Error msg');
+    console.log(result.error.message);
       throw new OpenAIError(
-        result.error.message,
+        //'Error in server/index.ts - result is not 200. Error message: ${result.error.message}'',
+        //result.error.message,
+        'Error in server/index.ts - result is not 200',
         result.error.type,
         result.error.param,
         result.error.code,
       );
     } else {
+    console.log('OpenAI API returned an error');
       throw new Error(
         `OpenAI API returned an error: ${
           decoder.decode(result?.value) || result.statusText
@@ -84,6 +112,7 @@ export const OpenAIStream = async (
     }
   }
 
+  console.log('STARTING STREAM READ');
   const stream = new ReadableStream({
     async start(controller) {
       const onParse = (event: ParsedEvent | ReconnectInterval) => {
@@ -108,10 +137,14 @@ export const OpenAIStream = async (
       const parser = createParser(onParse);
 
       for await (const chunk of res.body as any) {
+        console.log('...parsing...');
+        console.log(decoder.decode(chunk));
         parser.feed(decoder.decode(chunk));
       }
     },
   });
+
+  console.log('ABOUT TO RETURN STREAM');
 
   return stream;
 };

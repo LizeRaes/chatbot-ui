@@ -70,6 +70,8 @@ export const useFetch = () => {
       url: string,
       request?: RequestWithBodyModel,
     ): Promise<T> => {
+    console.log('FetchModels URL:');
+    console.log(url);
       return handleFetch(url, { ...request, method: 'post' });
     },
     put: async <T>(url: string, request?: RequestWithBodyModel): Promise<T> => {
