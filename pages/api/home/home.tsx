@@ -75,7 +75,7 @@ const Home = ({
   } = contextValue;
 
   const stopConversationRef = useRef<boolean>(false);
-
+  
   const { data, error, refetch } = useQuery(
     ['GetModels', apiKey, serverSideApiKeyIsSet],
     ({ signal }) => {
